@@ -21,9 +21,12 @@
 | organ | varchar | órgão de origem |
 | context | text | contexto mínimo do Domain Registration |
 | priority_sections | text[] | seções prioritárias |
+| known_fields | jsonb | `[{name, description}]` — contexto original do Domain Registration, congelado; usado no prompt de cold start |
 | periodicity | enum('annual','quarterly','monthly') | |
 | created_by | uuid FK → users.id | |
 | created_at | timestamptz | |
+
+`known_fields` é preservado no formato simples `{name, description}` exatamente como registrado pelo admin. Ao criar o Domínio, cada item também vira um `schema_field` v1 com `field_type: string` e `status: active` — permitindo que o schema evolua independentemente sem alterar o contexto original.
 
 ---
 
@@ -64,11 +67,14 @@ A versão ativa de um domínio é a de maior `version`.
 | schema_version_id | uuid FK → schema_versions.id \| null | definido no início da extração |
 | status | enum('pending','processing','needs_confirmation','needs_registration','completed','validated','failed') | |
 | confidence | float \| null | score da classificação automática |
+| period_reference | daterange \| null | período de referência do documento (ex: `[2024-01-01,2024-03-31]`); extraído pelo LLM; permite filtro overlap via `&&` |
 | result | jsonb \| null | campos extraídos (fase 1 + fase 2) |
 | error | text \| null | mensagem de erro se `failed` |
 | created_by | uuid FK → users.id | |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
+
+Query de filtro por período: `period_reference && daterange(period_start, period_end)`. O LLM é instruído a retornar o período de referência como intervalo de datas (primeiro e último dia do período coberto pelo documento). A API formata o `daterange` como string legível na resposta.
 
 ---
 
